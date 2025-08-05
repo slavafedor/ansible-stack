@@ -1,0 +1,38 @@
+[
+{% set targets_by_group = {} %}
+{% for group_name in monitoring_groups %}
+  {% if group_name in groups %}
+    {% set group_hosts = [] %}
+    {% for host in groups[group_name] %}
+      {% set host_ip = hostvars[host]['ansible_host'] | default(host) %}
+      {% set target = host_ip + ':' + (node_exporter_port | string) %}
+      {% set _ = group_hosts.append(target) %}
+    {% endfor %}
+    {% if group_hosts %}
+      {% set _ = targets_by_group.update({group_name: group_hosts}) %}
+    {% endif %}
+  {% endif %}
+{% endfor %}
+{% set ns = namespace(first=true) %}
+{% for group_name, targets in targets_by_group.items() %}
+  {% if not ns.first %},{% endif %}
+  {
+    "targets": {{ targets | to_json }},
+    "labels": {
+      "job": "{{ group_name }}",
+      "env": "{{ ansible_environment | default('production') }}"
+    }
+  }
+  {% set ns.first = false %}
+{% endfor %}
+{% if 'localhost' not in targets_by_group.keys() %}
+  {% if not ns.first %},{% endif %}
+  {
+    "targets": ["localhost:{{ prometheus_port }}"],
+    "labels": {
+      "job": "prometheus",
+      "env": "monitoring"
+    }
+  }
+{% endif %}
+]

@@ -1,0 +1,37 @@
+global:
+  scrape_interval: {{ scrape_interval }}
+  evaluation_interval: {{ evaluation_interval | default(scrape_interval) }}
+
+scrape_configs:
+{% for job in prometheus_jobs %}
+  - job_name: "{{ job.name }}"
+{% if job.targets is defined %}
+    static_configs:
+      - targets: {{ job.targets | to_json }}
+{% if job.labels is defined %}
+        labels:
+{% for key, value in job.labels.items() %}
+          {{ key }}: "{{ value }}"
+{% endfor %}
+{% endif %}
+{% endif %}
+{% if job.file_sd_configs is defined %}
+    file_sd_configs:
+{% for file_config in job.file_sd_configs %}
+      - files:
+{% for file in file_config.files %}
+          - {{ file }}
+{% endfor %}
+        refresh_interval: {{ file_config.refresh_interval | default('5m') }}
+{% endfor %}
+{% endif %}
+
+{% endfor %}
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: ["alertmanager:{{ alertmanager_port }}"]
+
+rule_files:
+  - /etc/prometheus/alert.rules.yml

@@ -1,0 +1,18 @@
+groups:
+{% for group in alert_rules %}
+  - name: {{ group.name }}
+    rules:
+{% for rule in group.rules %}
+      - alert: {{ rule.alert }}
+        expr: {{ rule.expr }}
+        for: {{ rule.for }}
+        labels:
+          severity: {{ rule.severity }}
+        annotations:
+          summary: "{{ rule.summary }}"
+{% if rule.description is defined %}
+          description: "{{ rule.description }}"
+{% endif %}
+{% endfor %}
+
+{% endfor %}

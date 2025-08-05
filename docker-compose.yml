@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  ansible-control:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ansible-control-node
+    hostname: ansible-control
+    volumes:
+      # Mount your playbooks and inventory
+      - ./ansible:/ansible
+      # Mount SSH keys for connecting to target hosts
+      - ./ssh-keys:/root/.ssh:ro
+      # Mount playbooks
+      - ./playbooks:/ansible/playbooks
+      - ../local:/ansible/local
+      - ../local/vault:/ansible/vault
+      # Persist command history
+      - ansible-history:/root/.bash_history
+    working_dir: /ansible
+    # Keep container running
+    command: tail -f /dev/null
+    networks:
+      - ansible-network
+    environment:
+      - ANSIBLE_HOST_KEY_CHECKING=False
+      - ANSIBLE_INVENTORY=/ansible/inventory
+      - ANSIBLE_CONFIG=/ansible/ansible.cfg
+
+volumes:
+  ansible-history:
+
+networks:
+  ansible-network:
+    driver: bridge

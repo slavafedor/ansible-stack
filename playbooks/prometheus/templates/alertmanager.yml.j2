@@ -1,0 +1,29 @@
+global:
+{% for key, value in alertmanager.global.items() %}
+  {{ key }}: {{ value | to_json }}
+{% endfor %}
+
+route:
+  receiver: '{{ alertmanager.route.receiver }}'
+  group_by: {{ alertmanager.route.group_by | to_json }}
+  group_wait: {{ alertmanager.route.group_wait }}
+  group_interval: {{ alertmanager.route.group_interval }}
+  repeat_interval: {{ alertmanager.route.repeat_interval }}
+
+receivers:
+{% for receiver in alertmanager.receivers %}
+  - name: '{{ receiver.name }}'
+{% if receiver.email_configs is defined %}
+    email_configs:
+{% for email_config in receiver.email_configs %}
+      - to: '{{ email_config.to }}'
+{% if email_config.subject is defined %}
+        subject: '{{ email_config.subject }}'
+{% endif %}
+{% if email_config.body is defined %}
+        body: |
+{{ email_config.body | indent(10, True) }}
+{% endif %}
+{% endfor %}
+{% endif %}
+{% endfor %}

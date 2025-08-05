@@ -1,0 +1,38 @@
+# SSH Keys - Never commit private keys!
+ssh-keys/id_rsa
+ssh-keys/id_ed25519
+ssh-keys/*_rsa
+ssh-keys/*_ed25519
+
+# Ansible logs
+ansible/ansible.log
+ansible/*.log
+
+# Docker volumes
+.docker/
+
+# IDE files
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.swp
+*.swo
+*~
+
+# Environment files
+.env
+.env.local
+
+# Ansible retry files
+*.retry
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo

@@ -1,0 +1,150 @@
+---
+# Prometheus Stack Deployment Playbook
+# This playbook deploys a complete Prometheus monitoring stack using Docker Compose
+# It generates dynamic node lists from Ansible inventory and sets up monitoring infrastructure
+
+- name: Deploy Prometheus Monitoring Stack
+  hosts: monitoring
+  become: yes
+  become_user: root
+  gather_facts: yes
+  vars_files:
+    - vars/main.yml
+  vars:
+    prometheus_stack_dir: "{{ ansible_env.HOME }}/prometheus-stack"
+
+  tasks:
+    - name: Create prometheus stack directory
+      file:
+        path: "{{ prometheus_stack_dir }}"
+        state: directory
+        mode: "0755"
+
+    - name: Create data directories for persistence
+      file:
+        path: "{{ prometheus_stack_dir }}/{{ item }}"
+        state: directory
+        mode: "0755"
+        owner: "{{ ansible_user_uid }}"
+        group: "{{ ansible_user_gid }}"
+      loop:
+        - prometheus_data
+        - alertmanager_data
+        - grafana_data
+        - targets
+
+    - name: Generate node list JSON from inventory
+      template:
+        src: node_list.json.j2
+        dest: "{{ prometheus_stack_dir }}/node_list.json"
+        mode: "0644"
+      notify: restart prometheus
+
+    - name: Deploy Prometheus configuration
+      template:
+        src: prometheus.yml.j2
+        dest: "{{ prometheus_stack_dir }}/prometheus.yml"
+        mode: "0644"
+      notify: restart prometheus
+
+    - name: Deploy Alertmanager configuration
+      template:
+        src: alertmanager.yml.j2
+        dest: "{{ prometheus_stack_dir }}/alertmanager.yml"
+        mode: "0644"
+      notify: restart alertmanager
+
+    - name: Deploy alert rules
+      template:
+        src: alert.rules.yml.j2
+        dest: "{{ prometheus_stack_dir }}/alert.rules.yml"
+        mode: "0644"
+      notify: restart prometheus
+
+    - name: Deploy Grafana datasource configuration
+      template:
+        src: grafana_prometheus_ds.yml.j2
+        dest: "{{ prometheus_stack_dir }}/grafana_prometheus_ds.yml"
+        mode: "0644"
+
+    - name: Copy Grafana dashboard
+      copy:
+        src: Dashboard.json
+        dest: "{{ prometheus_stack_dir }}/Dashboard.json"
+        mode: "0644"
+
+    - name: Deploy Docker Compose file
+      template:
+        src: docker-compose.yml.j2
+        dest: "{{ prometheus_stack_dir }}/docker-compose.yml"
+        mode: "0644"
+
+    - name: Create .env file for Docker Compose
+      template:
+        src: .env.j2
+        dest: "{{ prometheus_stack_dir }}/.env"
+        mode: "0600"
+
+    - name: Check if Docker is installed
+      command: docker --version
+      register: docker_version
+      ignore_errors: yes
+
+    - name: Check if Docker Compose is installed
+      command: docker-compose --version
+      register: docker_compose_version
+      ignore_errors: yes
+
+    - name: Display Docker status
+      debug:
+        msg: |
+          Docker version: {{ docker_version.stdout if docker_version.rc == 0 else 'Not installed' }}
+          Docker Compose version: {{ docker_compose_version.stdout if docker_compose_version.rc == 0 else 'Not installed' }}
+
+    - name: Start Prometheus stack with Docker Compose
+      docker_compose:
+        project_src: "{{ prometheus_stack_dir }}"
+        state: present
+        pull: yes
+      when:
+        - docker_version.rc == 0
+        - docker_compose_version.rc == 0
+        - prometheus_auto_start | default(false)
+
+    - name: Display deployment information
+      debug:
+        msg: |
+          Prometheus stack deployed to: {{ prometheus_stack_dir }}
+
+          Services will be available at:
+          - Prometheus: http://localhost:{{ prometheus_port }}
+          - Alertmanager: http://localhost:{{ alertmanager_port }}
+          - Grafana: http://localhost:{{ grafana_port }}
+
+          To start the stack manually:
+          cd {{ prometheus_stack_dir }} && docker-compose up -d
+
+          Generated node list from inventory groups: {{ monitoring_groups | join(', ') }}
+
+  handlers:
+    - name: restart prometheus
+      docker_compose:
+        project_src: "{{ prometheus_stack_dir }}"
+        services:
+          - prometheus
+        restarted: yes
+      when:
+        - docker_version.rc == 0
+        - docker_compose_version.rc == 0
+        - prometheus_auto_start | default(false)
+
+    - name: restart alertmanager
+      docker_compose:
+        project_src: "{{ prometheus_stack_dir }}"
+        services:
+          - alertmanager
+        restarted: yes
+      when:
+        - docker_version.rc == 0
+        - docker_compose_version.rc == 0
+        - prometheus_auto_start | default(false)

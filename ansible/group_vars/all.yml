@@ -1,0 +1,52 @@
+---
+# Global variables for all hosts
+# This file demonstrates how to use vault passwords safely
+
+# Load vault passwords (will be encrypted)
+vault_file: "/vault/passwords.yml"
+
+# Define password lookup for current host
+ansible_password: >-
+  {{
+    (vault_passwords | default({}))
+    | get_vault_password(
+        ansible_host | default(inventory_hostname),
+        ansible_user | default('root'),
+        inventory_hostname
+      )
+  }}
+
+# Alternative using the comprehensive lookup
+ansible_become_password: >-
+  {{
+    vault_passwords_by_hostname | default({})
+    | get_vault_password(
+        inventory_hostname,
+        ansible_user | default('root')
+      )
+    | default(
+        vault_passwords | default({})
+        | get_vault_password(
+          ansible_host | default(inventory_hostname),
+          ansible_user | default('root')
+        )
+      )
+  }}
+
+# SSH key file with vault passphrase lookup
+ansible_ssh_private_key_file: "~/.ssh/id_rsa"
+ansible_ssh_private_key_passphrase: >-
+  {{
+    vault_ssh_key_passphrases | default({})
+    | get('id_rsa', '')
+  }}
+
+# Common SSH arguments with host key checking disabled
+ansible_ssh_common_args: "-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
+
+# Python interpreter path
+ansible_python_interpreter: /usr/bin/python3
+
+# Default connection settings
+ansible_connection: ssh
+ansible_timeout: 30

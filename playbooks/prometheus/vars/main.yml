@@ -1,0 +1,120 @@
+---
+# Prometheus Stack Configuration Variables
+
+# Port configurations
+prometheus_port: 9090
+alertmanager_port: 9093
+grafana_port: 3000
+
+# Network configuration
+docker_network_name: monnet
+
+# Auto-start services (set to true to automatically start with docker-compose)
+prometheus_auto_start: false
+
+# Monitoring configuration
+scrape_interval: 15s
+evaluation_interval: 15s
+
+# Groups to monitor (these will be included in the node list JSON)
+monitoring_groups:
+  - webservers
+  - databases
+  - monitoring
+
+# Default monitoring port for node_exporter
+node_exporter_port: 9100
+
+# Prometheus job configurations
+prometheus_jobs:
+  - name: "prometheus"
+    targets: ["localhost:{{ prometheus_port }}"]
+    labels:
+      job: "prometheus"
+      env: "monitoring"
+
+  - name: "fleet-from-json"
+    file_sd_configs:
+      - files:
+          - /etc/prometheus/targets/fleet.json
+        refresh_interval: 5m
+
+# Alert configuration
+alert_rules:
+  - name: system_alerts
+    rules:
+      - alert: HighCPUUsage
+        expr: '100 - (avg by(instance)(irate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80'
+        for: 2m
+        severity: warning
+        summary: "High CPU usage on {{ $labels.instance }}"
+        description: "CPU usage is above 80% on {{ $labels.instance }} for more than 2 minutes."
+
+      - alert: HighMemoryUsage
+        expr: "(1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 85"
+        for: 2m
+        severity: warning
+        summary: "High memory usage on {{ $labels.instance }}"
+        description: "Memory usage is above 85% on {{ $labels.instance }} for more than 2 minutes."
+
+      - alert: DiskSpaceUsage
+        expr: '(1 - (node_filesystem_avail_bytes{fstype!="tmpfs"} / node_filesystem_size_bytes{fstype!="tmpfs"})) * 100 > 90'
+        for: 1m
+        severity: critical
+        summary: "Disk space usage high on {{ $labels.instance }}"
+        description: "Disk usage is above 90% on {{ $labels.instance }}."
+
+  - name: instance_down
+    rules:
+      - alert: InstanceDown
+        expr: "up == 0"
+        for: 1m
+        severity: critical
+        summary: "Instance {{ $labels.instance }} is down"
+        description: "Prometheus target {{ $labels.instance }} has been unreachable for more than 1 minute."
+
+# Alertmanager configuration
+alertmanager:
+  global:
+    smtp_require_tls: true
+    smtp_smarthost: "smtp.gmail.com:587"
+    smtp_from: "monitoring@example.com"
+    smtp_auth_username: "monitoring@example.com"
+    smtp_auth_password: "your-app-password-here"
+
+  route:
+    receiver: "default-alerts"
+    group_by: ["alertname", "cluster"]
+    group_wait: 30s
+    group_interval: 5m
+    repeat_interval: 3h
+
+  receivers:
+    - name: "default-alerts"
+      email_configs:
+        - to: "admin@example.com"
+          subject: "Prometheus Alert: {{ .GroupLabels.alertname }}"
+          body: |
+            {{ range .Alerts }}
+            Alert: {{ .Annotations.summary }}
+            Description: {{ .Annotations.description }}
+            Instance: {{ .Labels.instance }}
+            Severity: {{ .Labels.severity }}
+            {{ end }}
+
+# Grafana configuration
+grafana:
+  admin_user: admin
+  admin_password: admin
+  datasources:
+    - name: Prometheus
+      type: prometheus
+      url: "http://prometheus:{{ prometheus_port }}"
+      access: proxy
+      is_default: true
+
+# Docker image versions (latest by default)
+docker_images:
+  prometheus: "prom/prometheus:latest"
+  alertmanager: "prom/alertmanager:latest"
+  grafana: "grafana/grafana-oss:latest"
