@@ -21,6 +21,14 @@ RUN apt-get update && apt-get install -y \
 	jq \
 	&& rm -rf /var/lib/apt/lists/*
 
+# For Debian/Ubuntu-based images
+RUN apt-get update && apt-get install -y \
+	iputils-ping \
+	net-tools
+
+RUN chmod 4755 /usr/bin/ping
+RUN setcap cap_net_raw+p /usr/bin/ping
+
 # Create symbolic link for python
 RUN ln -s /usr/bin/python3 /usr/bin/python
 

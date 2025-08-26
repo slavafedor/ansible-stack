@@ -86,7 +86,7 @@ ansible-playbook -i inventory site.yml
 
 - `./ansible:/ansible` - Your playbooks, inventory, and Ansible configuration
 - `./ssh-keys:/root/.ssh:ro` - SSH keys for connecting to target hosts (read-only)
-- `ansible-history` - Persistent bash history
+- `ansible-history` - Persistent bash history (for example: `../local/ansible-history:/root/.bash_history`)
 
 ## Environment Variables
 
