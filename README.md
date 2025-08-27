@@ -65,6 +65,130 @@ web2 ansible_host=192.168.1.11 ansible_user=ubuntu
 db1 ansible_host=192.168.1.20 ansible_user=ubuntu
 ```
 
+Passwords for corresponding hosts and users are stored in `local/passwords.yml` vault password could be stored in, for example, `local/vault_pass` file or asked interactively with use of `--ask-vault-password`. The `passwords.yml` has the following format:
+
+```yaml
+vault_passwords:
+  "slava-rpi.eol.ucar.edu":
+    daq: "qadaq"
+
+  "slava-rpi":
+    daq: "qadaq"
+
+vault_passwords_by_hostname:
+  HPSRV:
+    slava: "actual_password_for_slava_on_hpsrv"
+
+vault_ssh_key_passphrases:
+  id_rsa: "your_private_key_passphrase"
+```
+
+This setup includes a filter plugin for vault passwords. It provides the following password lookup functions:
+
+```python
+def get_vault_password(vault_passwords, hostname, username, fallback_hostname=None):
+    """
+    Safely lookup password from vault structure
+
+    Args:
+        vault_passwords: The vault password dictionary
+        hostname: The hostname or IP to lookup
+        username: The username to lookup
+        fallback_hostname: Alternative hostname to try if first lookup fails
+
+    Returns:
+        Password string or None if not found
+    """
+# ...
+
+def get_service_credential(vault_service_credentials, service, credential_type):
+    """
+    Lookup service credentials from vault
+
+    Args:
+        vault_service_credentials: Service credentials dictionary
+        service: Service name (e.g., 'smtp', 'grafana')
+        credential_type: Type of credential (e.g., 'username', 'password')
+
+    Returns:
+        Credential value or None if not found
+    """
+#...
+
+def safe_password_lookup(vault_data, host_info, username=None):
+    """
+    Comprehensive password lookup with multiple fallback strategies
+
+    Args:
+        vault_data: Complete vault data structure
+        host_info: Dictionary with 'hostname', 'ansible_host', 'inventory_hostname'
+        username: Username to lookup (optional, can be in host_info)
+
+    Returns:
+        Password or None
+    """
+#...
+
+```
+
+#### Example usages
+
+##### 1. Direct host credential lookup
+
+```yaml
+ansible_password: >-
+  {{
+    (vault_passwords | default({}))
+    | get_vault_password(
+        ansible_host | default(inventory_hostname),
+        ansible_user | default('root'),
+        inventory_hostname
+      )
+  }}
+```
+
+This pulls the SSH password for the current host and user, falling back to the inventory name if needed
+
+##### 2. Comprehensive password lookup with fallbacks
+
+```yaml
+host_info:
+  hostname: "{{ inventory_hostname }}"
+  ansible_host: "{{ ansible_host | default('') }}"
+  inventory_hostname: "{{ inventory_hostname }}"
+  ansible_user: "{{ ansible_user | default('root') }}"
+safe_lookup: >-
+  {{
+    {
+      'vault_passwords': vault_passwords,
+      'vault_passwords_by_hostname': vault_passwords_by_hostname
+    }
+    | safe_password_lookup(host_info)
+  }}
+```
+
+`safe_password_lookup` tries multiple strategies (IP, inventory name, hostname) to find a matching password entry
+
+##### 3. Service-specific credentials
+
+```yaml
+gmail_user: >-
+  {{
+    vault_service_credentials
+    | get_service_credential('smtp', 'username')
+  }}
+grafana_pass: >-
+  {{
+    vault_service_credentials
+    | get_service_credential('grafana', 'admin_password')
+  }}
+```
+
+These lookups fetch service usernames or passwords (e.g., SMTP, Grafana) from the vault’s `vault_service_credentials` section.
+
+Use these patterns as templates for retrieving other secrets in playbooks, templates, or variable files.
+
+
 ### 5. Test Connectivity
 
 ```bash
