@@ -20,7 +20,7 @@ evaluation_interval: 15s
 monitoring_groups:
   - webservers
   - databases
-  - monitoring
+  - rpis
 
 # Default monitoring port for node_exporter
 node_exporter_port: 9100

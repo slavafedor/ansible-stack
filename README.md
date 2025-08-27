@@ -70,10 +70,10 @@ Passwords for corresponding hosts and users are stored in `local/passwords.yml` 
 ```yaml
 vault_passwords:
   "slava-rpi.eol.ucar.edu":
-    daq: "qadaq"
+    piuser: "password"
 
   "slava-rpi":
-    daq: "qadaq"
+    piuser: "password"
 
 vault_passwords_by_hostname:
   HPSRV:
