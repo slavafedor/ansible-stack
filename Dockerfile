@@ -19,6 +19,7 @@ RUN apt-get update && apt-get install -y \
 	nano \
 	tree \
 	jq \
+	iputils-ping \
 	&& rm -rf /var/lib/apt/lists/*
 
 # For Debian/Ubuntu-based images

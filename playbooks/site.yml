@@ -1,0 +1,38 @@
+---
+# Example Ansible Playbook
+# This is a sample playbook to test your Ansible control node
+
+- name: Test connectivity to all hosts
+  hosts: all
+  gather_facts: yes
+  tasks:
+    - name: Ping all hosts
+      ping:
+      
+    - name: Display system information
+      debug:
+        msg: |
+          Host: {{ inventory_hostname }}
+          OS: {{ ansible_distribution }} {{ ansible_distribution_version }}
+          Architecture: {{ ansible_architecture }}
+          Python: {{ ansible_python_version }}
+
+- name: Update package cache (Ubuntu/Debian)
+  hosts: all
+  become: yes
+  tasks:
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+      when: ansible_os_family == "Debian"
+      
+    - name: Install basic packages
+      apt:
+        name:
+          - curl
+          - wget
+          - vim
+          - htop
+        state: present
+      when: ansible_os_family == "Debian"
