@@ -17,6 +17,30 @@ This project sets up an Ansible control node using Docker Compose, based on Ubun
 └── ssh-keys/                 # Directory for SSH keys (mounted read-only)
 ```
 
+### local volume
+
+Setup in `docker-compose.yml' heavily relays on th ./local local folder
+
+```bash
+./local/
+├── ansible-history             # /home/ansible/.bash_history
+├── inventory.ini               # your local inventory file 
+├── root-history                # /root/.bash_history
+├── ssh-keys
+│   ├── ansible                 # /home/ansible/.ssh
+│   │   ├── id_ed25519
+│   │   ├── id_ed25519.pub
+│   │   └── known_hosts
+│   └── root                    # /root/.ssh
+│       ├── id_ed25519
+│       ├── id_ed25519.pub
+│       └── known_hosts
+└── vault                       # vault folder, to keep secrets local
+    ├── passwords.yml
+    ├── README.md
+    └── .vault_pass
+```
+
 ## Features
 
 - **Ubuntu 22.04** base image with Python 3
@@ -47,16 +71,16 @@ If you need to connect to remote hosts, place your SSH keys in the `ssh-keys/` d
 
 ```bash
 # Copy your private key
-cp ~/.ssh/id_rsa ./ssh-keys/
-chmod 600 ./ssh-keys/id_rsa
+cp ~/.ssh/id_ed25519 ./ssh-keys/
+chmod 600 ./ssh-keys/id_ed25519
 
 # Copy your public key
-cp ~/.ssh/id_rsa.pub ./ssh-keys/
+cp ~/.ssh/id_ed25519.pub ./ssh-keys/
 ```
 
 ### 4. Configure Your Inventory
 
-Edit `ansible/inventory` to add your target hosts:
+Edit `local/inventory.ini` to add your target hosts:
 
 ```ini
 [webservers]
@@ -210,7 +234,7 @@ ansible-playbook -i inventory site.yml
 ## Volume Mounts
 
 - `./ansible:/ansible` - Your playbooks, inventory, and Ansible configuration
-- `./ssh-keys:/root/.ssh:ro` - SSH keys for connecting to target hosts (read-only)
+- `./ssh-keys/root/:/root/.ssh` - SSH keys for connecting to target hosts (read-only)
 - `ansible-history` - Persistent bash history (for example: `../local/ansible-history:/root/.bash_history`)
 
 ## Environment Variables
@@ -272,6 +296,129 @@ ansible-galaxy collection install ansible.posix
 - Consider using SSH agent forwarding for better security
 - The container runs as root by default; you can switch to the `ansible` user if needed
 - Host key checking is disabled for convenience but can be enabled in production
+
+Here’s a clean, repeatable way to create and use an SSH key with Ansible.
+
+# 1) Generate a key (control node)
+
+Use Ed25519 (fast, secure, widely supported):
+
+```bash
+# Linux/macOS/WSL/Windows (PowerShell supports ssh-keygen too)
+ssh-keygen -t ed25519 -a 100 -C "ansible@$(hostname)" -f ~/.ssh/id_ed25519
+# -a 100 = KDF rounds (harder to brute force)
+# You’ll be prompted for an optional passphrase (recommended).
+```
+
+If you need legacy compatibility with very old servers:
+
+```bash
+ssh-keygen -t rsa -b 4096 -o -a 100 -C "ansible@$(hostname)" -f ~/.ssh/id_rsa
+```
+
+Fix permissions (just in case):
+
+```bash
+chmod 700 ~/.ssh
+chmod 600 ~/.ssh/id_*         # private keys
+chmod 644 ~/.ssh/id_*.pub     # public keys
+```
+
+# 2) Install the public key on each target host
+
+Replace `<user>` and `<host>` with your login on the target (often `pi@<rpi-ip>`):
+
+```bash
+ssh-copy-id -i ~/.ssh/id_ed25519.pub <user>@<host>
+# or, if ssh-copy-id isn’t available:
+cat ~/.ssh/id_ed25519.pub | ssh <user>@<host> 'mkdir -p ~/.ssh && chmod 700 ~/.ssh && cat >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys'
+```
+
+Verify manual SSH works **without** a password:
+
+```bash
+ssh <user>@<host> true
+```
+
+# 3) Tell Ansible to use the key
+
+Minimal inventory example (`inventory.ini`):
+
+```ini
+[raspis]
+rpi1 ansible_host=192.168.1.50 ansible_user=pi ansible_ssh_private_key_file=~/.ssh/id_ed25519
+```
+
+If you need sudo:
+
+```ini
+[raspis:vars]
+ansible_become=true
+ansible_become_method=sudo
+```
+
+Test:
+
+```bash
+ansible rpi1 -i inventory.ini -m ping -vvv
+```
+
+# 4) (Optional) Use `~/.ssh/config` for multiple keys/hosts
+
+This keeps your inventory cleaner:
+
+```sshconfig
+# ~/.ssh/config
+Host rpi1
+  HostName 192.168.1.50
+  User pi
+  IdentityFile ~/.ssh/id_ed25519
+  IdentitiesOnly yes
+```
+
+Then your inventory can be just:
+
+```ini
+[raspis]
+rpi1
+```
+
+# 5) (Optional) ssh-agent (so you don’t retype the passphrase)
+
+```bash
+eval "$(ssh-agent -s)"
+ssh-add ~/.ssh/id_ed25519
+```
+
+# 6) Good practices & troubleshooting
+
+- **Known hosts**: add once to avoid prompts
+
+  ```bash
+  ssh-keyscan -H 192.168.1.50 >> ~/.ssh/known_hosts
+  ```
+
+- **Permissions** on the target: `~/.ssh` = 700, `authorized_keys` = 600.
+
+- **Wrong user**: on Raspberry Pi OS you might have created a custom user at first boot; use that in `ansible_user`.
+- **Disable password auth (after keys work)** on the target for security:
+
+  ```
+  /etc/ssh/sshd_config:
+    PasswordAuthentication no
+    PubkeyAuthentication yes
+  sudo systemctl reload ssh
+  ```
+
+- **Become password**: if sudo asks for a password, run with `-K` or store it via Ansible Vault.
+
+- **Multiple hosts**: loop `ssh-copy-id` quickly:
+
+  ```bash
+  for h in rpi1 rpi2 rpi3; do ssh-copy-id -i ~/.ssh/id_ed25519.pub pi@$h; done
+  ```
+
+That’s it. Generate key → copy public part to hosts → point Ansible at the private key → test with `ansible -m ping`.
 
 ## Troubleshooting
 

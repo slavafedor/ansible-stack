@@ -18,7 +18,9 @@ services:
       - ../local:/ansible/local
       - ../local/vault:/ansible/vault
       # Persist command history
-      - ../local/ansible-history:/root/.bash_history
+      - ../local/root-history:/root/.bash_history
+      - ../local/ansible-history:/home/ansible/.bash_history
+
     working_dir: /ansible
     # Keep container running
     command: tail -f /dev/null
