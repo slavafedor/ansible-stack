@@ -10,8 +10,9 @@ services:
     volumes:
       # Mount your playbooks and inventory
       - ./ansible:/ansible
-      # Mount SSH keys for connecting to target hosts
-      - ~/.ssh:/root/.ssh:ro
+      # Mount SSH keys for connecting to target hosts #:ro
+      - ../local/ssh-keys/ansible:/home/ansible/.ssh
+      - ../local/ssh-keys/root:/root/.ssh 
       # Mount playbooks
       - ./playbooks:/ansible/playbooks
       - ../local:/ansible/local

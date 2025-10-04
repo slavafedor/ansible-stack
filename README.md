@@ -12,6 +12,8 @@ This project sets up an Ansible control node using Docker Compose, based on Ubun
 │   ├── ansible.cfg           # Ansible configuration file
 │   ├── inventory             # Inventory file for target hosts
 │   └── site.yml              # Example playbook
+├── local/                    # "local" volume mount 
+├── vault/                    # Ansible "vault" volume mount
 └── ssh-keys/                 # Directory for SSH keys (mounted read-only)
 ```
 
@@ -187,7 +189,6 @@ grafana_pass: >-
 These lookups fetch service usernames or passwords (e.g., SMTP, Grafana) from the vault’s `vault_service_credentials` section.
 
 Use these patterns as templates for retrieving other secrets in playbooks, templates, or variable files.
-
 
 ### 5. Test Connectivity
 

@@ -59,7 +59,7 @@ init_vault() {
     # Encrypt the vault file if it's not already encrypted
     if [[ -f "$VAULT_FILE" ]] && ! ansible-vault view "$VAULT_FILE" --vault-password-file="$VAULT_PASS_FILE" > /dev/null 2>&1; then
         print_info "Encrypting vault file..."
-        ansible-vault encrypt "$VAULT_FILE" --vault-password-file="$VAULT_PASS_FILE"
+        ansible-vault encrypt --vault-password-file="$VAULT_PASS_FILE" --encrypt-vault-id=default "$VAULT_FILE" 
         print_status "Vault file encrypted successfully"
     fi
     
@@ -70,7 +70,7 @@ init_vault() {
 edit_vault() {
     check_vault_password || return 1
     print_status "Opening vault file for editing..."
-    ansible-vault edit "$VAULT_FILE" --vault-password-file="$VAULT_PASS_FILE"
+    ansible-vault edit "$VAULT_FILE" --vault-password-file="$VAULT_PASS_FILE" --encrypt-vault-id=default
 }
 
 # View vault file
@@ -83,11 +83,12 @@ view_vault() {
 # Encrypt vault file
 encrypt_vault() {
     check_vault_password || return 1
-    if ansible-vault view "$VAULT_FILE" --vault-password-file="$VAULT_PASS_FILE" > /dev/null 2>&1; then
+    if ansible-vault view "$VAULT_FILE" --vault-password-file="$VAULT_PASS_FILE" --encrypt-vault-id=default > /dev/null 2>&1; then
         print_warning "Vault file is already encrypted"
     else
         print_status "Encrypting vault file..."
-        ansible-vault encrypt "$VAULT_FILE" --vault-password-file="$VAULT_PASS_FILE"
+        echo ansible-vault encrypt --vault-password-file="$VAULT_PASS_FILE" --encrypt-vault-id=default "$VAULT_FILE" 
+        ansible-vault encrypt "$VAULT_FILE" --vault-password-file="$VAULT_PASS_FILE" --encrypt-vault-id=default
         print_status "Vault file encrypted successfully"
     fi
 }
@@ -95,7 +96,7 @@ encrypt_vault() {
 # Decrypt vault file
 decrypt_vault() {
     check_vault_password || return 1
-    if ! ansible-vault view "$VAULT_FILE" --vault-password-file="$VAULT_PASS_FILE" > /dev/null 2>&1; then
+    if ! ansible-vault view "$VAULT_FILE" --vault-password-file="$VAULT_PASS_FILE"  > /dev/null 2>&1; then
         print_warning "Vault file is already decrypted or doesn't exist"
     else
         print_status "Decrypting vault file..."
@@ -115,7 +116,7 @@ test_vault() {
         
         # Test playbook with vault
         print_info "Running vault test playbook..."
-        cd "$SCRIPT_DIR" && ansible-playbook test-vault.yml --vault-password-file="$VAULT_PASS_FILE" --limit localhost
+        cd "$SCRIPT_DIR" && ansible-playbook test-vault.yml --vault-password-file="$VAULT_PASS_FILE" --vault-id=default --limit localhost -vvvv
     else
         print_error "✗ Cannot access vault file"
         return 1
@@ -138,7 +139,7 @@ change_password() {
     fi
     
     # Rekey the vault file
-    ansible-vault rekey "$VAULT_FILE" --vault-password-file="$VAULT_PASS_FILE" --new-vault-password-file=<(echo "$new_password")
+    ansible-vault rekey "$VAULT_FILE" --vault-password-file="$VAULT_PASS_FILE" --encrypt-vault-id=default --new-vault-password-file=<(echo "$new_password")
     
     # Update password file
     echo "$new_password" > "$VAULT_PASS_FILE"
