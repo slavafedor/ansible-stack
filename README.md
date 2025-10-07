@@ -61,8 +61,22 @@ docker-compose up -d --build
 
 ### 2. Access the Ansible Control Node
 
+As a root:
+
 ```bash
 docker-compose exec ansible-control bash
+```
+
+As an `ansible` user
+
+```bash
+docker-compose exec -u ansible ansible-control bash
+```
+
+Additional volumes mounted:
+
+```bash
+docker-compose run -u ansible -v /home/projects/servers_setup:/ansible/playbooks/servers_setup ansible-control bash
 ```
 
 ### 3. Set Up SSH Keys (Optional)
@@ -299,7 +313,7 @@ ansible-galaxy collection install ansible.posix
 
 Here’s a clean, repeatable way to create and use an SSH key with Ansible.
 
-# 1) Generate a key (control node)
+### 1) Generate a key (control node)
 
 Use Ed25519 (fast, secure, widely supported):
 
@@ -324,7 +338,7 @@ chmod 600 ~/.ssh/id_*         # private keys
 chmod 644 ~/.ssh/id_*.pub     # public keys
 ```
 
-# 2) Install the public key on each target host
+### 2) Install the public key on each target host
 
 Replace `<user>` and `<host>` with your login on the target (often `pi@<rpi-ip>`):
 
@@ -340,7 +354,7 @@ Verify manual SSH works **without** a password:
 ssh <user>@<host> true
 ```
 
-# 3) Tell Ansible to use the key
+### 3) Tell Ansible to use the key
 
 Minimal inventory example (`inventory.ini`):
 
@@ -363,7 +377,7 @@ Test:
 ansible rpi1 -i inventory.ini -m ping -vvv
 ```
 
-# 4) (Optional) Use `~/.ssh/config` for multiple keys/hosts
+### 4) (Optional) Use `~/.ssh/config` for multiple keys/hosts
 
 This keeps your inventory cleaner:
 
@@ -383,14 +397,14 @@ Then your inventory can be just:
 rpi1
 ```
 
-# 5) (Optional) ssh-agent (so you don’t retype the passphrase)
+### 5) (Optional) ssh-agent (so you don’t retype the passphrase)
 
 ```bash
 eval "$(ssh-agent -s)"
 ssh-add ~/.ssh/id_ed25519
 ```
 
-# 6) Good practices & troubleshooting
+### 6) Good practices & troubleshooting
 
 - **Known hosts**: add once to avoid prompts
 
@@ -403,7 +417,7 @@ ssh-add ~/.ssh/id_ed25519
 - **Wrong user**: on Raspberry Pi OS you might have created a custom user at first boot; use that in `ansible_user`.
 - **Disable password auth (after keys work)** on the target for security:
 
-  ```
+  ```text
   /etc/ssh/sshd_config:
     PasswordAuthentication no
     PubkeyAuthentication yes

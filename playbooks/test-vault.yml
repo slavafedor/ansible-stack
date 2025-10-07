@@ -1,0 +1,78 @@
+---
+# Example playbook demonstrating secure password usage
+- name: Test Vault Password Lookup
+  hosts: all, localhost
+  gather_facts: yes
+  vars_files:
+    - /ansible/vault/passwords.yml
+
+  tasks:
+    - name: Debug - Show available vault data structure (passwords masked)
+      debug:
+        msg: |
+          Vault passwords available for: {{ vault_passwords.keys() | list }}
+          Vault passwords by hostname available for: {{ vault_passwords_by_hostname.keys() | list }}
+          Current host info:
+            - inventory_hostname: {{ inventory_hostname }}
+            - ansible_host: {{ ansible_host | default('not set') }}
+            - ansible_user: {{ ansible_user | default('not set') }}
+
+    - name: Test password lookup for current host
+      debug:
+        msg: |
+          Password lookup result: {{ 'Found' if lookup_password else 'Not found' }}
+      vars:
+        lookup_password: >-
+          {{
+            vault_passwords
+            | get_vault_password(
+                ansible_host | default(inventory_hostname),
+                ansible_user | default('root'),
+                inventory_hostname
+              )
+          }}
+      no_log: true # Don't log the actual password
+
+    - name: Test comprehensive password lookup
+      debug:
+        msg: |
+          Using safe_password_lookup: {{ 'Password found' if safe_lookup else 'No password found' }}
+      vars:
+        host_info:
+          hostname: "{{ inventory_hostname }}"
+          ansible_host: "{{ ansible_host | default('') }}"
+          inventory_hostname: "{{ inventory_hostname }}"
+          ansible_user: "{{ ansible_user | default('root') }}"
+        safe_lookup: >-
+          {{
+            {
+              'vault_passwords': vault_passwords,
+              'vault_passwords_by_hostname': vault_passwords_by_hostname
+            }
+            | safe_password_lookup(host_info)
+          }}
+      no_log: true
+
+    - name: Test service credential lookup
+      debug:
+        msg: |
+          SMTP Gmail username: {{ gmail_user | default('not found') }}
+          Grafana admin password: {{ 'Found' if grafana_pass else 'Not found' }}
+      vars:
+        gmail_user: >-
+          {{
+            vault_service_credentials
+            | get_service_credential('smtp', 'username')
+          }}
+        grafana_pass: >-
+          {{
+            vault_service_credentials
+            | get_service_credential('grafana', 'admin_password')
+          }}
+      no_log: true
+
+    - name: Ping test with vault password (if available)
+      ping:
+      when:
+        - vault_passwords is defined
+        - ansible_password is defined

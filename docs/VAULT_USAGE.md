@@ -36,25 +36,40 @@ ansible_python_interpreter=/usr/bin/python3
 # To get started
 
 1. Initialize vault:
-   cd /home/slava/Projects/DevOps/ansible-stack/ansible
-   ./vault-manage.sh init
+
+```bash
+cd /home/slava/Projects/DevOps/ansible-stack/ansible
+./vault-manage.sh init
+```
 
 2. Edit vault passwords:
-   ./vault-manage.sh edit
+
+```bash
+./vault-manage.sh edit
+```
 
 3. Add your actual passwords in the vault file:
-   vault_passwords:
-     "192.168.1.127":  # HPSRV
-       slava: "actual_password_for_slava_on_hpsrv"
-     "192.168.1.130":  # HP-Envy
-       slava: "actual_password_for_slava_on_hp_envy"
-     "grow.local":     # RPi-Grow
-       pi: "actual_password_for_pi_user"
-     "rpi-zw2-2.local": # RPi-ZW2-2
-       bbu: "actual_password_for_bbu_user"
+
+```bash
+vault_passwords:
+  "192.168.1.127":  # HPSRV
+  slava: "actual_password_for_slava_on_hpsrv"
+  "192.168.1.130":  # HP-Envy
+  slava: "actual_password_for_slava_on_hp_envy"
+  "grow.local":     # RPi-Grow
+  pi: "actual_password_for_pi_user"
+  "rpi-zw2-2.local": # RPi-ZW2-2
+  bbu: "actual_password_for_bbu_user"
+```
 
 4. Test the setup:
-   ./vault-manage.sh test
+
+```bash
+./vault-manage.sh test
+```
 
 5. Use in playbooks:
-   ansible-playbook playbooks/prometheus/deploy.yml --vault-password-file=.vault_pass
+
+```bash
+ansible-playbook playbooks/prometheus/deploy.yml --vault-password-file=.vault_pass
+```
