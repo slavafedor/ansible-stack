@@ -28,7 +28,11 @@ services:
       - ansible-network
     environment:
       - ANSIBLE_HOST_KEY_CHECKING=False
-      - ANSIBLE_INVENTORY=/ansible/inventory
+      - ANSIBLE_INVENTORY=/ansible/local/inventory/inventory.ini
+      - ANSIBLE_PRIVATE_KEY_FILE=/home/ansible/.ssh/id_ed25519
+      - ANSIBLE_REMOTE_USER=ansible
+      - ANSIBLE_TIMEOUT=30
+      - ANSIBLE_STDOUT_CALLBACK=debug
       - ANSIBLE_CONFIG=/ansible/ansible.cfg
 
 volumes:

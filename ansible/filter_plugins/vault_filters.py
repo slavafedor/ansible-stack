@@ -17,14 +17,19 @@ def get_vault_password(vault_passwords, hostname, username, fallback_hostname=No
     Returns:
         Password string or None if not found
     """
+    print(
+        f"Looking up password for {username}@{hostname} with fallback {fallback_hostname}"
+    )
     # Try primary hostname lookup
     if hostname in vault_passwords:
         if username in vault_passwords[hostname]:
+            print(f"Found password for {username}@{hostname}")
             return vault_passwords[hostname][username]
 
     # Try fallback hostname if provided
     if fallback_hostname and fallback_hostname in vault_passwords:
         if username in vault_passwords[fallback_hostname]:
+            print(f"Found password for {username}@{fallback_hostname}")
             return vault_passwords[fallback_hostname][username]
 
     return None

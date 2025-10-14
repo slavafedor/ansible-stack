@@ -24,7 +24,17 @@ Setup in `docker-compose.yml' heavily relays on th ./local local folder
 ```bash
 ./local/
 ├── ansible-history             # /home/ansible/.bash_history
-├── inventory.ini               # your local inventory file 
+├── files                       # local files
+│   ├── node_info_HPSRV.json
+│   ├── node_info_RPi2.json
+│   └── node_info_RPi-Grow.json
+├── inventory
+│   ├── group_vars
+│   │   └── all
+│   │       ├── all.yml
+│   │       └── passwords.yml -> /ansible/local/vault/passwords.yml
+│   ├── host_vars
+│   └── inventory.ini           # your local inventory file 
 ├── root-history                # /root/.bash_history
 ├── ssh-keys
 │   ├── ansible                 # /home/ansible/.ssh
@@ -94,7 +104,7 @@ cp ~/.ssh/id_ed25519.pub ./ssh-keys/
 
 ### 4. Configure Your Inventory
 
-Edit `local/inventory.ini` to add your target hosts:
+Edit `local/inventory/inventory.ini` to add your target hosts:
 
 ```ini
 [webservers]
@@ -242,7 +252,7 @@ ansible all -m ping
 ansible-playbook site.yml
 
 # Run with specific inventory
-ansible-playbook -i inventory site.yml
+ansible-playbook -i /ansible/local/inventory/inventory.ini site.yml
 ```
 
 ## Volume Mounts

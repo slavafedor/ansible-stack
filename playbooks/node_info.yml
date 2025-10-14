@@ -1,18 +1,7 @@
 ---
 - name: Gather Node Information
   hosts: all
-  gather_facts:
-    true
-
-    # lookup_password: >-
-    #   {{
-    #     vault_passwords
-    #     | get_vault_password(
-    #         ansible_host | default(inventory_hostname),
-    #         ansible_user | default('root'),
-    #         inventory_hostname
-    #       )
-    #   }}
+  gather_facts: true
 
   tasks:
     - name: Remote info block
