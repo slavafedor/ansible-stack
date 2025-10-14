@@ -1,0 +1,107 @@
+---
+- name: Gather Node Information
+  hosts: all
+  gather_facts:
+    true
+
+    # lookup_password: >-
+    #   {{
+    #     vault_passwords
+    #     | get_vault_password(
+    #         ansible_host | default(inventory_hostname),
+    #         ansible_user | default('root'),
+    #         inventory_hostname
+    #       )
+    #   }}
+
+  tasks:
+    - name: Remote info block
+      block:
+        # Set block vars working around Ansible issue with block-level vars:
+        - name: Set block vars
+          ansible.builtin.set_fact:
+            ansible_ssh_common_args: "-o StrictHostKeyChecking=no"
+            ansible_become: yes
+            ansible_become_method: sudo
+            ansible_become_user: root
+
+        - name: Ensure docs directory exists
+          ansible.builtin.file:
+            path: "/home/{{ ansible_user }}/docs"
+            state: directory
+            mode: "0755"
+
+        # - name: Gather additional facts
+        #   ansible.builtin.setup:
+        #     gather_subset:
+        #       - hardware
+        #       - network
+        #       - virtual
+        #       - ohai
+        #       - fips
+        #       - all
+        #   register: gathered_facts
+        - name: Debug gathered facts
+          ansible.builtin.debug:
+            var: gathered_facts.ansible_facts
+          # when: false  # Set to true for debugging
+
+        - name: Create a structured dictionary with node info
+          ansible.builtin.set_fact:
+            node_info:
+              hostname: "{{ ansible_facts['hostname'] }}"
+              id: "{{ ansible_facts['machine_id'] | default('N/A') }}"
+              os:
+                distribution: "{{ ansible_facts['distribution'] }}"
+                version: "{{ ansible_facts['distribution_version'] }}"
+                release: "{{ ansible_facts['distribution_release'] }}"
+              kernel: "{{ ansible_facts['kernel'] }}"
+              architecture: "{{ ansible_facts['architecture'] }}"
+              cpu:
+                cores: "{{ ansible_facts['processor_cores'] }}"
+                counts: "{{ ansible_facts['processor_count'] }}"
+                nproc: "{{ ansible_facts['processor_nproc'] }}"
+                # model: "{{ ansible_facts['processor'] | select('match', '.*model name.*') | first | split(':') | last | trim }}"
+                # mhz: "{{ ansible_facts['processor'] | select('match', '.*cpu MHz.*') | first | split(':') | last | trim }}"
+                # lscpu: "{{ ansible_facts['lscpu'] | default({}) }}"
+              memory:
+                total_mb: "{{ ansible_facts['memtotal_mb'] }}"
+                free_mb: "{{ ansible_facts['memfree_mb'] }}"
+              python:
+                version: "{{ ansible_facts['python']['version']['major'] }}.{{ ansible_facts['python']['version']['minor'] }}.{{ ansible_facts['python']['version']['micro'] }}"
+                executable: "{{ ansible_facts['python']['executable'] }}"
+              storage:
+                mounts: "{{ ansible_facts['mounts'] }}"
+              network:
+                interfaces: "{{ ansible_facts['interfaces'] }}"
+                default_ipv4: "{{ ansible_facts['default_ipv4'] }}"
+                default_ipv6: "{{ ansible_facts['default_ipv6'] }}"
+                all_ipv4_addresses: "{{ ansible_all_ipv4_addresses }}"
+                all_ipv6_addresses: "{{ ansible_all_ipv6_addresses }}"
+
+        - name: Create node_info.json file
+          ansible.builtin.copy:
+            content: "{{ node_info | to_nice_json }}"
+            dest: "/home/{{ ansible_user }}/docs/node_info.json"
+            mode: "0644"
+
+    - name: Copy node_info to control node
+      block:
+        - name: Ensure control node directory exists for node info files
+          ansible.builtin.file:
+            path: "/ansible/local/files"
+            state: directory
+            mode: "0755"
+          run_once: True
+          # delegate_to: localhost
+          # become: False
+
+        - name: Write node_info to control node
+          ansible.builtin.copy:
+            content: "{{ node_info | to_nice_json }}"
+            dest: "/ansible/local/files/node_info_{{ inventory_hostname }}.json"
+            mode: "0644"
+          # delegate_to: localhost
+          # become: False
+      become: False
+      delegate_to: localhost

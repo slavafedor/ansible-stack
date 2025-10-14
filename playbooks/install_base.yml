@@ -1,0 +1,67 @@
+---
+- name: Install base packages (wget, git, curl, ping, socat, python)
+  hosts: all
+  become: yes
+  gather_facts: yes
+
+  vars:
+    package_map:
+      Debian:
+        - wget
+        - git
+        - curl
+        - iputils-ping
+        - socat
+        - python3
+      RedHat:
+        - wget
+        - git
+        - curl
+        - iputils
+        - socat
+        - python3
+      Fedora:
+        - wget
+        - git
+        - curl
+        - iputils
+        - socat
+        - python3
+      Archlinux:
+        - wget
+        - git
+        - curl
+        - iputils
+        - socat
+        - python
+      Suse:
+        - wget
+        - git
+        - curl
+        - iputils
+        - socat
+        - python3
+
+    default_packages:
+      - wget
+      - git
+      - curl
+      - socat
+      - python3
+
+  tasks:
+    - name: Choose package list for this OS family
+      set_fact:
+        install_packages: "{{ package_map[ansible_facts['os_family']] | default(default_packages) }}"
+
+    - name: Update apt cache (Debian family)
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+      when: ansible_facts['os_family'] == 'Debian'
+
+    - name: Install base packages
+      package:
+        name: "{{ install_packages }}"
+        state: present
+      tags: packages

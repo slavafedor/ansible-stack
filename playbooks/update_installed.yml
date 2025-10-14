@@ -1,0 +1,50 @@
+---
+- name: Update all installed packages
+  hosts: all
+  become: yes
+  gather_facts: yes
+
+  tasks:
+    - name: Update apt packages (Debian/Ubuntu)
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+        upgrade: dist
+        autoremove: yes
+        autoclean: yes
+      when: ansible_pkg_mgr == "apt"
+
+    - name: Update dnf packages (Fedora/RHEL 8+)
+      dnf:
+        name: "*"
+        state: latest
+      when: ansible_pkg_mgr == "dnf"
+
+    - name: Update yum packages (RHEL/CentOS 7)
+      yum:
+        name: "*"
+        state: latest
+      when: ansible_pkg_mgr == "yum"
+
+    - name: Update pacman packages (Arch)
+      pacman:
+        update_cache: yes
+        upgrade: yes
+      when: ansible_pkg_mgr == "pacman"
+
+    - name: Update zypper packages (openSUSE/SLE)
+      zypper:
+        name: "*"
+        state: latest
+        update_cache: yes
+      when: ansible_pkg_mgr == "zypper"
+
+    - name: Update apk packages (Alpine)
+      apk:
+        upgrade: yes
+      when: ansible_pkg_mgr == "apk"
+
+    - name: Fail when package manager is unsupported
+      fail:
+        msg: "Unsupported or unknown package manager: {{ ansible_pkg_mgr | default('undefined') }}"
+      when: ansible_pkg_mgr not in ["apt", "dnf", "yum", "pacman", "zypper", "apk"]

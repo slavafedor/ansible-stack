@@ -1,0 +1,59 @@
+---
+# Explanation of the playbook:
+# hosts:  Specifies the target host(s) or group of hosts where the
+#          public key will be installed.
+#
+# become: true: If the remote_username is not the user Ansible
+#         connects as, and you need elevated privileges to modify their authorized_keys file, use become: true to escalate privileges (e.g., via sudo).
+#
+# ansible.builtin.authorized_key:
+#         The module responsible for managing SSH authorized keys.
+#
+# user:   The username on the remote machine whose authorized_keys
+#         file will be modified.
+#
+# state: present:
+#         Ensures the key is present in the authorized_keys file.
+#         Use "absent" to remove a key.
+#
+# key:    "{{ lookup('file', '~/.ssh/ansible_key.pub') }}": This uses the lookup plugin to read the content of your public key file from the Ansible control machine and pass it to the remote host.
+# path:   (Optional) If the authorized_keys file is not in the default location (~/.ssh/authorized_keys) for the specified user, you can provide the custom path here.
+#
+#
+# Usage:
+# 1. Ensure you have your public key (e.g., ansible_key.pub)
+#    in the ~/.ssh/ directory on your Ansible control machine.
+# 2. Update the hosts and user fields in the playbook as needed.
+# 3. Run the playbook with:
+#
+#    ansible-playbook your_playbook_name.yml -i inventory_file --ask-pass
+#
+# Note: If you're using SSH keys without a passphrase, you can omit the --ask-pass option.
+#
+# Note: If you need to use sudo to become another user, you might also need to provide the --ask-become-pass option:
+#
+#    ansible-playbook your_playbook_name.yml -i inventory_file --ask-pass -e ansible_become_password='YourSudoPasswordHere'
+
+- name: Install SSH public key on remote host
+  hosts: all # Or specify a single host, e.g., 'webservers'
+  become: true # Use 'become' if you need root privileges to manage the user's authorized_keys
+  become_method: sudo
+  vars:
+    ansible_ssh_common_args: "-o StrictHostKeyChecking=no"
+    ansible_become_user: root
+
+  tasks:
+    # - name: Debug become password
+    #   ansible.builtin.debug:
+    #     msg: "Become password is set {{ 'Yes' if ansible_become_password != '' else 'No' } }"
+    #   # when: ansible_become_password != ''
+    #   when: true # Set to true for debugging
+
+    - name: Add SSH public key to remote user's authorized_keys
+      ansible.builtin.authorized_key:
+        user: "{{ ansible_user }}" # The user on the remote machine
+        state: present
+        # key: "{{ lookup('file', '~/.ssh/id_ed25519.pub') }}" # Path to your public key on the control machine
+        key: "{{ lookup('file', '/ansible/local/ssh-keys/ansible/id_ed25519.pub') }}" # Path to your public key on the control machine
+        # path: /ansible/local/ssh_keys/ansible/id_ed25519.pub # Optional: specify a custom path if needed
+        manage_dir: yes # Optional: create the .ssh directory if it doesn't exist

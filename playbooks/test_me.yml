@@ -1,0 +1,42 @@
+---
+# test_me.yml
+- hosts: all
+  gather_facts: no
+  become: true
+  # vars_files:
+  #   - /ansible/local/passwords.yml
+  # vars:
+  #   # Alternative using the comprehensive lookup
+  #   ansible_become_password: >-
+  #     {{
+  #       vault_passwords_by_hostname | default({})
+  #       | get_vault_password(
+  #           inventory_hostname,
+  #           ansible_user | default('root')
+  #         )
+  #       | default(
+  #           vault_passwords | default({})
+  #           | get_vault_password(
+  #             ansible_host | default(inventory_hostname),
+  #             ansible_user | default('root')
+  #           )
+  #         )
+  #     }}
+
+  tasks:
+    - name: Gather facts without privilege escalation
+      ansible.builtin.setup:
+      become: false
+
+    # - name: Write to local tmp
+    #   copy:
+    #     content: "hi"
+    #     dest: "/tmp/localtest.txt"
+    #   delegate_to: localhost
+    #   become: false
+
+    - name: Debug become password
+      ansible.builtin.debug:
+        # msg: "Become password is set {{ 'Yes' if ansible_become_password != '' else 'No' }}"
+        msg: "Become password is set"
+      when: ansible_become_password is defined
