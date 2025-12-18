@@ -3,7 +3,22 @@
 # This file demonstrates how to use vault passwords safely
 
 # Load vault passwords (will be encrypted)
-vault_file: "/vault/passwords.yml"
+# vault_file: "/ansible/vault/passwords.yml"
+
+host_info:
+  hostname: "{{ inventory_hostname }}"
+  ansible_host: "{{ ansible_host | default('') }}"
+  inventory_hostname: "{{ inventory_hostname }}"
+  ansible_user: "{{ ansible_user | default('root') }}"
+
+safe_lookup: >-
+  {{
+    {
+      'vault_passwords': vault_passwords,
+      'vault_passwords_by_hostname': vault_passwords_by_hostname
+    }
+    | safe_password_lookup(host_info)
+  }}
 
 # Define password lookup for current host
 ansible_password: >-
@@ -50,3 +65,7 @@ ansible_python_interpreter: /usr/bin/python3
 # Default connection settings
 ansible_connection: ssh
 ansible_timeout: 30
+gathering: explicit
+fact_caching: jsonfile
+fact_caching_timeout: 86400 # Cache facts for 24 hours
+fact_caching_connection: /tmp/ansible_facts_cache # Directory for file-based

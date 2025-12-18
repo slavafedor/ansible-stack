@@ -1,0 +1,18 @@
+---
+- name: Demo playbook
+  hosts: all
+  become: yes
+  vars:
+    roles:
+      - alerting
+      - bb_dev
+      - bb_hub
+
+  tasks:
+    - name: Sample task 1
+      debug:
+        msg: "This is a sample task in the demo playbook."
+
+    - name: Sample task 2
+      debug:
+        var: roles

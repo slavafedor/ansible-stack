@@ -11,10 +11,7 @@ fi
 
 # Create base directory structure
 echo "Creating base Ansible project structure..."
-mkdir -p {group_vars,host_vars,roles,playbooks,files,templates}
-
-# Create main files
-touch ansible.cfg site.yml
+mkdir -p {roles,playbooks/templates,files}
 
 # Parse inventory file for roles/tags
 echo "Parsing inventory file for roles..."
@@ -62,15 +59,31 @@ host_key_checking = False
 retry_files_enabled = False
 EOF
 
-# Create sample site.yml
-cat > site.yml << EOF
+# Create sample demo.yml
+cat > ./playbooks/demo.yml << EOF
 ---
-- name: Main playbook
+- name: Demo playbook
   hosts: all
   become: yes
-  roles:
-$(for role in $ROLES; do echo "    - $role"; done)
+  vars:
+    roles:
+      - alerting
+      - bb_dev
+      - bb_hub
+
+  tasks:
+    - name: Sample task 1
+      debug:
+        msg: "This is a sample task in the demo playbook."
+
+    - name: Sample task 2
+      debug:
+        var: roles
 EOF
 
+# Create "local" structure
+echo "Creating 'local' structure..."
+mkdir -p local/{files,inventory/{group_vars/{all,rpi},host_vars},ssh-keys/{ansible, root},vault}
+
 echo "Project structure created successfully!"
-tree -L 2 2>/dev/null || find . -type d -maxdepth 2
+tree -L 4 2>/dev/null || find . -type d -maxdepth 4
