@@ -24,23 +24,25 @@
 # 1. Ensure you have your public key (e.g., ansible_key.pub)
 #    in the ~/.ssh/ directory on your Ansible control machine.
 # 2. Update the hosts and user fields in the playbook as needed.
-# 3. Run the playbook with:
+# 3. This is the playbook to deploy the Ansible's public key to remote hosts. You need to run it first to set up passwordless SSH access for Ansible.
+# 4. You will need to provide the UserName, SSH and Become passwords for the remote user when prompted.
+#  Run the playbook with:
 #
-#    ansible-playbook your_playbook_name.yml -i inventory_file --ask-pass
-#
-# Note: If you're using SSH keys without a passphrase, you can omit the --ask-pass option.
-#
-# Note: If you need to use sudo to become another user, you might also need to provide the --ask-become-pass option:
-#
-#    ansible-playbook your_playbook_name.yml -i inventory_file --ask-pass -e ansible_become_password='YourSudoPasswordHere'
+#    ansible-playbook your_playbook_name.yml -i inventory_file
 
 - name: Install SSH public key on remote host
   hosts: all # Or specify a single host, e.g., 'webservers'
   become: true # Use 'become' if you need root privileges to manage the user's authorized_keys
-  become_method: sudo
-  vars:
-    ansible_ssh_common_args: "-o StrictHostKeyChecking=no"
-    ansible_become_user: root
+  vars_prompt:
+    - name: ansible_user
+      prompt: "Enter the remote username"
+      private: false
+    - name: ansible_become_pass
+      prompt: "Enter sudo password"
+      private: true
+    - name: ansible_ssh_pass
+      prompt: "Enter SSH password"
+      private: true
 
   tasks:
     # - name: Debug become password
