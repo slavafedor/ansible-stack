@@ -499,5 +499,5 @@ ansible all -m copy -a "src=/local/file dest=/remote/file"
 
 ## Additional utilities
 
-- `structure_init.sh` - shell script to create ./local structure. See more [here](./docs/PROJECT_INIT.md).
+- `structure_init.sh` - shell script to create new project and  ./local structure. See more [here](./docs/PROJECT_INIT.md).
 - `vault-manage.sh` - shell script-wrapper for the `ansible-vault` command. See more [here](./docs/VAULT_USAGE.md).
