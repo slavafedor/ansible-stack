@@ -6,6 +6,7 @@ cp /home/slava/Projects/DevOps/local/inventory.ini /home/slava/Projects/DevOps/a
 
 # Your inventory.ini should look like this
 
+```
 [webservers]
 HPSRV ansible_host=192.168.1.127 ansible_user=slava
 HP-Envy ansible_host=192.168.1.130 ansible_user=slava
@@ -28,12 +29,12 @@ RPIs
 [all:vars]
 ansible_ssh_common_args='-o StrictHostKeyChecking=no'
 ansible_python_interpreter=/usr/bin/python3
+```
 
-# The vault system will automatically look up passwords for each host
+The vault system will automatically look up passwords for each host
+based on the ansible_host and ansible_user values
 
-# based on the ansible_host and ansible_user values
-
-# To get started
+## To get started
 
 1. Initialize vault:
 
